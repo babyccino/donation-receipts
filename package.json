@@ -1,0 +1,15 @@
+{
+  "name": "donation-receipts",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "node-quickbooks": "^2.0.39",
+    "pdfkit": "^0.13.0"
+  }
+}
