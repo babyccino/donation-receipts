@@ -4,12 +4,19 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "bash ./scripts/windows-start.sh"
   },
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "csv-parse": "^5.0.4",
+    "googleapis": "^92.0.0",
+    "intuit-oauth": "^4.0.0",
+    "node-csv": "^0.1.2",
     "node-quickbooks": "^2.0.39",
-    "pdfkit": "^0.13.0"
+    "open": "^8.4.0",
+    "pdfkit": "^0.13.0",
+    "server-destroy": "^1.0.1"
   }
 }

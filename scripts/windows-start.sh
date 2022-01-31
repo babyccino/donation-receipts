@@ -1,0 +1,1 @@
+node index.js && start chrome 'C:\Users\gusry\OneDrive\Documents\Code\donation-receipts\output.pdf'
