@@ -1,4 +1,5 @@
-const PDFDocument = require('pdfkit');
+const PDFDocument = require('pdfkit'),
+      getStream = require('get-stream');
 
 const createDonationReceipt = (receiptNumber, donee, donor, dateIssued = new Date()) => {
   const margins = {
@@ -159,7 +160,7 @@ const createDonationReceipt = (receiptNumber, donee, donor, dateIssued = new Dat
   //
 
   doc.end();
-  return doc;
+  return getStream.buffer(doc);
 }
 
 module.exports = createDonationReceipt;

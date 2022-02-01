@@ -7,8 +7,7 @@ const { google } = require('googleapis'),
 
 const createDonationReceipt = require('./createReceipt'),
       getData = require('./getData'),
-      makeBody = require('./mail'),
-      getStream = require('get-stream');
+      makeBody = require('./mail');
 
 
 const clientAuth = require("./config/auth.json");
@@ -77,20 +76,18 @@ donor = {
 
 const doc = createDonationReceipt(receiptNumber, donee, donor);
 
-const rawText = makeBody("This is subject", "This is message", "test@gmail.com", {stream: await getStream.buffer(doc), filename: "stream.pdf"});
 const scopes = [
   'https://www.googleapis.com/auth/gmail.readonly',
   'https://www.googleapis.com/auth/gmail.compose'
 ];
 
 const auth = await authenticate(scopes);
-
 const gmail = google.gmail({version: 'v1', auth});
 const res = await gmail.users.drafts.create({
   'userId': 'me',
   'resource': {
       'message': {
-          'raw': rawText
+          'raw': makeBody("This is subject", "This is message", "test@gmail.com", {stream: await doc, filename: "stream.pdf"})
       }
   }
 });
