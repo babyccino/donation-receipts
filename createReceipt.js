@@ -1,7 +1,6 @@
 const PDFDocument = require('pdfkit');
-const fs = require('fs');
 
-const createDonationReceipt = (filename, receiptNumber, donee, donor, dateIssued = new Date()) => {
+const createDonationReceipt = (receiptNumber, donee, donor, dateIssued = new Date()) => {
   const margins = {
           top: 25,
           bottom: 25,
@@ -12,8 +11,6 @@ const createDonationReceipt = (filename, receiptNumber, donee, donor, dateIssued
           size: 'LETTER',
           margins
         });
-
-  doc.pipe(fs.createWriteStream(filename));
 
   const largeFontSize = 15;
   doc
@@ -162,6 +159,7 @@ const createDonationReceipt = (filename, receiptNumber, donee, donor, dateIssued
   //
 
   doc.end();
+  return doc;
 }
 
 module.exports = createDonationReceipt;

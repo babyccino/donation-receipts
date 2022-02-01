@@ -6,9 +6,10 @@ const { google } = require('googleapis'),
       opn = require('open');
 
 const createDonationReceipt = require('./createReceipt'),
-      getData = require('./getData');
+      getData = require('./getData'),
+      makeBody = require('./mail'),
+      getStream = require('get-stream');
 
-getData();
 
 const clientAuth = require("./config/auth.json");
 
@@ -50,51 +51,50 @@ const authenticate = async scopes => {
   });
 };
 
-const listLabels = auth => {
-  const gmail = google.gmail({version: 'v1', auth});
-  gmail.users.labels.list({
-    userId: 'me',
-  }, (err, res) => {
-    if (err) return console.log('The API returned an error: ' + err);
-    const labels = res.data.labels;
-    if (labels.length) {
-      console.log('Labels:');
-      labels.forEach((label) => {
-        console.log(`- ${label.name}`);
-      });
-    } else {
-      console.log('No labels found.');
-    }
-  });
+// main
+(async () => { 
+
+const filename = 'output.pdf',
+receiptNumber = 1,
+donee = {
+  name: 'Squamish United Church',
+  address: 'Box 286',
+  charityNumber: '000000000 RR 0000',
+  locationIssued: 'Squamish, BC',
+  signer: 'Gus Ryan'
+},
+donor = {
+  name: 'Jeff Jeffersonison',
+  address: 'McNamee Pl',
+  gift: {
+    total: 1000,
+    byCategory: [
+      {name: "M&S", total: 100},
+      {name: "local", total: 900}
+    ]
+  }
 };
 
+const doc = createDonationReceipt(receiptNumber, donee, donor);
+
+const rawText = makeBody("This is subject", "This is message", "test@gmail.com", {stream: await getStream.buffer(doc), filename: "stream.pdf"});
 const scopes = [
   'https://www.googleapis.com/auth/gmail.readonly',
   'https://www.googleapis.com/auth/gmail.compose'
 ];
-// authenticate(scopes)
-//   .then(listLabels)
-//   .catch(console.error);
 
-const filename = 'output.pdf',
-      receiptNumber = 1,
-      donee = {
-        name: 'Squamish United Church',
-        address: 'Box 286',
-        charityNumber: '000000000 RR 0000',
-        locationIssued: 'Squamish, BC',
-        signer: 'Gus Ryan'
-      },
-      donor = {
-        name: 'Jeff Jeffersonison',
-        address: 'McNamee Pl',
-        gift: {
-          total: 1000,
-          byCategory: [
-            {name: "M&S", total: 100},
-            {name: "local", total: 900}
-          ]
-        }
-      };
+const auth = await authenticate(scopes);
 
-// createDonationReceipt(filename, receiptNumber, donee, donor);
+const gmail = google.gmail({version: 'v1', auth});
+const res = await gmail.users.drafts.create({
+  'userId': 'me',
+  'resource': {
+      'message': {
+          'raw': rawText
+      }
+  }
+});
+
+console.log(`Status: ${res.statusText}`);
+
+})();
