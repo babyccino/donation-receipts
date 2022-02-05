@@ -1,5 +1,6 @@
 const http = require('http'),
-      url = require('url');
+      url = require('url'),
+      fs = require('fs');
       
 const { google } = require('googleapis'),
       destroyer = require('server-destroy'),
@@ -51,47 +52,102 @@ const authenticate = async scopes => {
 };
 
 // main
-(async () => { 
+(async () => {
 
-const filename = 'output.pdf',
-receiptNumber = 1,
-donee = {
-  name: 'Squamish United Church',
-  address: 'Box 286',
-  charityNumber: '000000000 RR 0000',
-  locationIssued: 'Squamish, BC',
-  signer: 'Gus Ryan'
-},
-donor = {
-  name: 'Jeff Jeffersonison',
-  address: 'McNamee Pl',
-  gift: {
-    total: 1000,
-    byCategory: [
-      {name: "M&S", total: 100},
-      {name: "local", total: 900}
-    ]
+  // const donor = {
+  //   name: 'Jeff Jeffersonison',
+  //   billingAddress: 'McNamee Pl',
+  //   gift: {
+  //     total: 1000,
+  //     byCategory: [
+  //       {name: "M&S", total: 100},
+  //       {name: "local", total: 900}
+  //     ]
+  //   }
+  // };
+
+  const createDrafts = true;
+  let auth;
+
+  if (createDrafts) {
+    const scopes = [
+      'https://www.googleapis.com/auth/gmail.readonly',
+      'https://www.googleapis.com/auth/gmail.compose'
+    ];
+
+    auth = authenticate(scopes);
   }
-};
 
-const doc = createDonationReceipt(receiptNumber, donee, donor);
+  const data = await getData();
+  // formatting names
+  for (let donor of data) {
+    donor.name = donor.name.replace(/[0-9]/g, '').trim();
+    if (donor.name.indexOf(',') != -1) {
+      donor.name = donor.name.split(', ').reverse().join(' ');
+    }
+  }
 
-const scopes = [
-  'https://www.googleapis.com/auth/gmail.readonly',
-  'https://www.googleapis.com/auth/gmail.compose'
-];
+  let gmail;
+  if (createDrafts) gmail = google.gmail({version: 'v1', auth: await auth});
 
-const auth = await authenticate(scopes);
-const gmail = google.gmail({version: 'v1', auth});
-const res = await gmail.users.drafts.create({
-  'userId': 'me',
-  'resource': {
-      'message': {
-          'raw': makeBody("This is subject", "This is message", "test@gmail.com", {stream: await doc, filename: "stream.pdf"})
+  let noAddress = [], noEmail = [];
+  
+  const donee = {
+    name: 'Squamish United Church',
+    address: 'Box 286',
+    charityNumber: '000000000 RR 0000',
+    locationIssued: 'Squamish, BC',
+    signer: 'Gus Ryan',
+    issuedForYear: 2021
+  };
+  const limit = 3;
+  for (let i = 0; i < Math.min(limit, data.length); ++i) {
+    const donor = data[i];
+    // if (donor.name != "Cindy Roy") continue;
+
+    const doc = createDonationReceipt(i, donee, donor);
+
+    const filename = `${donor.name.replace(' ', '_')}.pdf`;
+
+    if (true) {
+      fs.writeFileSync('./Receipts/' + filename, await doc);
+    }
+
+    if (!donor.billAddress) noAddress.push(donor.name);
+    if (!donor.email) noEmail.push(donor.name);
+
+    if (createDrafts && donor.email) {
+const body = `Dear ${donor.name},
+
+Thank you for contributing to Squamish United Church in 2021. Please see attached your donation receipt
+
+Kind Regards
+Gus Ryan
+Administrator
+Squamish United Church`
+
+      try {
+        gmail.users.drafts.create({
+          'userId': 'me',
+          'resource': {
+              'message': {
+                  'raw': makeBody("Your 2021 Squamish United Church donation receipt", body, donor.email, {stream: await doc, filename})
+              }
+          }
+        });
+      } catch(e) { 
+        console.log(e);
       }
+    }
   }
-});
 
-console.log(`Status: ${res.statusText}`);
+
+  const donor = data[2];
+
+  if (true) {
+    const makeDraft = (donor, doc) => {
+      
+    }
+  }
 
 })();

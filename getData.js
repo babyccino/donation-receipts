@@ -2,13 +2,12 @@ var fs = require('fs');
 var { parse } = require('csv-parse');
 
 //       donor = {
-//         name: 'Jeff Jeffersonison',
-//         address: 'McNamee Pl',
+//         name,
+//         address,
 //         gift: {
-//           total: 1000,
+//           total,
 //           byCategory: [
-//             {name: "M&S", total: 100},
-//             {name: "local", total: 900}
+//             {category: total}, ...
 //           ]
 //         }
 //       };
@@ -28,7 +27,7 @@ let getSalesByCustomer = () => new Promise((res, rej) => {
       };
       
       for (const property in record) {
-        if (property == "Customer" || property == "TOTAL") continue;
+        if (property == "Customer" || property == "TOTAL" || record[property] == '') continue;
         
         sale.gift.byCategory[property] =
           record[property] == '' ?
@@ -50,14 +49,7 @@ let getCustomers = () => new Promise((res, rej) => {
     if (err) rej(err);
     
     let customerDict = {};
-    for (let customer of records) {
-      customer.Customer = customer.Customer.replace(/[0-9]/g, '').trim();
-      if (customer.Customer.indexOf(',') != -1) {
-        const names = customer.Customer.split(', ');
-        customer.Customer = names[1] + ' ' + names[0];
-      }
-      customerDict[customer.Customer] = customer;
-    }
+    for (let customer of records) customerDict[customer.Customer] = customer;
 
     res(customerDict);
   });
@@ -66,19 +58,16 @@ let getCustomers = () => new Promise((res, rej) => {
 });
 
 const getData = async () => {
-  let noAddress = [],
-      noEmail = [];
   const [salesByCustomers, customers] = await Promise.all([getSalesByCustomer(), getCustomers()]);
   for (let entry of salesByCustomers) {
     const customer = customers[entry.name];
 
-    if (customer["Billing Address"]) entry["Billing Address"] = customer["Billing Address"];
-    else if (customer["Shipping Address"]) entry["Shipping Address"] = customer["Shipping Address"];
-    else noAddress.push(entry.name);
-
+    if (customer["Billing Address"] || customer["Shipping Address"]) {
+      entry.billingAddress = customer["Billing Address"] || customer["Shipping Address"];
+      entry.shippingAddress = customer["Shipping Address"] || customer["Billing Address"];
+    }
     
-    if (customer["Email"]) entry["Email"] = customer["Email"];
-    else noEmail.push(entry.name);
+    if (customer["Email"]) entry.email = customer["Email"];
   }
   
   return salesByCustomers;

@@ -55,7 +55,7 @@ const createDonationReceipt = (receiptNumber, donee, donor, dateIssued = new Dat
   doc
     .font('./fonts/NotoSans-Regular.ttf')
     .fontSize(smallFontSize)
-    .text(`Year donations received: 2021`);
+    .text(`Year donations received: ${donee.issuedForYear}`);
   doc
     .font('./fonts/NotoSans-Regular.ttf')
     .fontSize(smallFontSize)
@@ -70,10 +70,15 @@ const createDonationReceipt = (receiptNumber, donee, donor, dateIssued = new Dat
     .moveTo(87 + margins.left, doc.y)
     .lineTo(doc.page.width - margins.right, doc.y)
     .stroke();
-  doc
-    .font('./fonts/NotoSans-Regular.ttf')
-    .fontSize(largeFontSize)
-    .text(`Address: ${donor.address}`, margins.left, doc.y + 5);
+
+  if (donor.billingAddress)
+    doc
+      .font('./fonts/NotoSans-Regular.ttf')
+      .fontSize(largeFontSize)
+      .text(`Address: ${donor.billingAddress.replace(donor.name, "").trim().replace(/\r\n/g, ", ").replace(/\n|\r/g, ", ")}`, margins.left, doc.y + 5);
+  else 
+    doc.moveDown();
+  
   doc
     .moveTo(64 + margins.left, doc.y)
     .lineTo(doc.page.width - margins.right, doc.y)
@@ -119,45 +124,45 @@ const createDonationReceipt = (receiptNumber, donee, donor, dateIssued = new Dat
     .stroke();
 
   doc.moveDown();
-  const byCategorySectionWidth = 300,
-        spaceBetweenColumns = 1;
-  
-
-  // text interaction is broken with right-aligned text so below is a bit stupid
-  doc
-    .font('./fonts/NotoSans-Bold.ttf')
-    .fontSize(smallFontSize)
-    .text("Category", margins.left, doc.y, {
-      align: "right",
-      width: (byCategorySectionWidth - spaceBetweenColumns)/2,
-      continued: true,
-      lineBreak: false
-    })
-    .text("Amount", byCategorySectionWidth/2-8, doc.y, {align: "left", lineBreak: false});
-
-  doc
-    .moveTo(margins.left + byCategorySectionWidth/2 - 100, doc.y + 1)
-    .lineTo(margins.left + byCategorySectionWidth/2, doc.y)
-    .stroke();
-  doc
-    .moveTo(margins.left + byCategorySectionWidth/2 + 11, doc.y + 1)
-    .lineTo(margins.left + byCategorySectionWidth/2 + 11 + 100, doc.y)
-    .stroke();
-
-  doc.y += 2
-  
-  for (const {name, total} of donor.gift.byCategory) {
+  {
+    const byCategorySectionWidth = 200,
+          spaceBetweenColumns = 8,
+          xOffset = 30;
+    
+    y = doc.y;
     doc
-      .font('./fonts/NotoSans-Regular.ttf')
+      .font('./fonts/NotoSans-Bold.ttf')
       .fontSize(smallFontSize)
-      .text(name, margins.left, doc.y, {
-        align: "right",
+      .text("Category", xOffset + margins.left, y, {
         width: (byCategorySectionWidth - spaceBetweenColumns)/2,
-        continued: true
+        align: "right"
       })
-      .text(formatter.format(total), byCategorySectionWidth/2+15, doc.y, {align: "left"});
+      .text("Amount", xOffset + margins.left + (byCategorySectionWidth + spaceBetweenColumns)/2, y  );
+
+    doc
+      .moveTo(xOffset + margins.left, doc.y + 1)
+      .lineTo(xOffset + margins.left + (byCategorySectionWidth - spaceBetweenColumns)/2, doc.y + 1)
+      .stroke();
+    doc
+      .moveTo(xOffset + margins.left + (byCategorySectionWidth + spaceBetweenColumns)/2, doc.y + 1)
+      .lineTo(xOffset + margins.left + byCategorySectionWidth, doc.y + 1)
+      .stroke();
+
+    doc.y += 2
+    
+    for (const category in donor.gift.byCategory) {
+      const donation = donor.gift.byCategory[category];
+      y = doc.y;
+      doc
+        .font('./fonts/NotoSans-Regular.ttf')
+        .fontSize(smallFontSize)
+        .text(category, xOffset + margins.left, y, {
+          width: (byCategorySectionWidth - spaceBetweenColumns)/2,
+          align: "right"
+        })
+        .text(formatter.format(donation), xOffset + margins.left + (byCategorySectionWidth + spaceBetweenColumns)/2, y  );
+    }
   }
-  //
 
   doc.end();
   return getStream.buffer(doc);
