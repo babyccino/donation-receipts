@@ -7,6 +7,8 @@ module.exports = (subject, message, receiverId, attachment) => {
   const attach = attachment.stream ? 
     attachment.stream.toString("base64") :
     '';
+  const filename2 = "Stewardship Letter.pdf"
+  const attach2 = fs.readFileSync("./" + filename2).toString("base64");
   // console.dir(attach);
   const str = [
 
@@ -25,6 +27,11 @@ module.exports = (subject, message, receiverId, attachment) => {
       'Content-Disposition: attachment; filename=' + attachment.filename,
       "Content-Transfer-Encoding: base64" + nl,
       attach,
+      "--" + boundary,
+      "Content-Type: Application/pdf; name=" + filename2,
+      'Content-Disposition: attachment; filename=' + filename2,
+      "Content-Transfer-Encoding: base64" + nl,
+      attach2,
       "--" + boundary + "--"
 
   ].join("\n");

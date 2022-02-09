@@ -66,7 +66,9 @@ const authenticate = async scopes => {
   //   }
   // };
 
-  const createDrafts = true;
+  const createDrafts = true,
+        writeFile = false,
+        testingPDF = false;
   let auth;
 
   if (createDrafts) {
@@ -77,7 +79,19 @@ const authenticate = async scopes => {
 
     auth = authenticate(scopes);
   }
-
+  
+  let noAddress = [], noEmail = [];
+  let gmail;
+  
+  const donee = {
+    name: 'Squamish United Church',
+    address: 'Box 286, Squamish, BC, V8B 0A3',
+    charityNumber: '119161172 RR 0001',
+    locationIssued: 'Squamish, BC',
+    signer: 'Gus Ryan',
+    issuedForYear: 2021,
+  };
+  
   const data = await getData();
   // formatting names
   for (let donor of data) {
@@ -87,45 +101,35 @@ const authenticate = async scopes => {
     }
   }
 
-  let gmail;
-  if (createDrafts) gmail = google.gmail({version: 'v1', auth: await auth});
-
-  let noAddress = [], noEmail = [];
-  
-  const donee = {
-    name: 'Squamish United Church',
-    address: 'Box 286',
-    charityNumber: '000000000 RR 0000',
-    locationIssued: 'Squamish, BC',
-    signer: 'Gus Ryan',
-    issuedForYear: 2021
-  };
-  const limit = 3;
+  const limit = 100;
   for (let i = 0; i < Math.min(limit, data.length); ++i) {
     const donor = data[i];
-    // if (donor.name != "Cindy Roy") continue;
+    if (donor.name != "Cindy Roy") continue;
 
     const doc = createDonationReceipt(i, donee, donor);
 
     const filename = `${donor.name.replace(' ', '_')}.pdf`;
 
-    if (true) {
-      fs.writeFileSync('./Receipts/' + filename, await doc);
+    if (writeFile || testingPDF) {
+      if (testingPDF) fs.writeFileSync('./output.pdf', await doc);
+      else fs.writeFileSync('./Receipts/' + filename, await doc);
     }
 
     if (!donor.billAddress) noAddress.push(donor.name);
     if (!donor.email) noEmail.push(donor.name);
 
     if (createDrafts && donor.email) {
-const body = `Dear ${donor.name},
+const body =
+`Dear ${donor.name},
 
 Thank you for contributing to Squamish United Church in 2021. Please see attached your donation receipt
 
 Kind Regards
 Gus Ryan
 Administrator
-Squamish United Church`
+Squamish United Church`;
 
+      if (!gmail) gmail = google.gmail({version: 'v1', auth: await auth});
       try {
         gmail.users.drafts.create({
           'userId': 'me',
@@ -136,18 +140,11 @@ Squamish United Church`
           }
         });
       } catch(e) { 
-        console.log(e);
+        console.error(e);
       }
     }
-  }
 
-
-  const donor = data[2];
-
-  if (true) {
-    const makeDraft = (donor, doc) => {
-      
-    }
+    if (testingPDF) break;
   }
 
 })();

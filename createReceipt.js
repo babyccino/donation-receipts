@@ -15,12 +15,12 @@ const createDonationReceipt = (receiptNumber, donee, donor, dateIssued = new Dat
 
   const largeFontSize = 15;
   doc
-    .font('./fonts/NotoSans-Regular.ttf')
+    .font('./fonts/NotoSans-Bold.ttf')
     .fontSize(largeFontSize)
     .text('Official donation receipt for income tax purposes', margins.left, margins.top, {continued: true});
 
   doc
-    .font('./fonts/NotoSans-Regular.ttf')
+    .font('./fonts/NotoSans-Bold.ttf')
     .fontSize(largeFontSize)
     .text(`Receipt# ${receiptNumber}`, {
       align: 'right'
@@ -35,7 +35,7 @@ const createDonationReceipt = (receiptNumber, donee, donor, dateIssued = new Dat
   // donee name, address and charity number, left side next to logo
   const smallFontSize = 10;
   doc
-    .font('./fonts/NotoSans-Regular.ttf')
+    .font('./fonts/NotoSans-Bold.ttf')
     .fontSize(smallFontSize)
     .text(donee.name, logoSize + margins.left + 3, 60);
   doc
@@ -49,34 +49,45 @@ const createDonationReceipt = (receiptNumber, donee, donor, dateIssued = new Dat
 
   // date and location issued right side
   doc
-    .font('./fonts/NotoSans-Regular.ttf')
+    .font('./fonts/NotoSans-Bold.ttf')
     .fontSize(smallFontSize)
-    .text(`Receipt issued: ${dateIssued.getDate()}/${dateIssued.getMonth()}/${dateIssued.getFullYear()}`, 380, 60);
+    .text(`Receipt issued: `, 380, 60, {continued: true})
+    .font('./fonts/NotoSans-Regular.ttf')
+    .text(`${dateIssued.getDate()}/${dateIssued.getMonth()}/${dateIssued.getFullYear()}`);
   doc
-    .font('./fonts/NotoSans-Regular.ttf')
+    .font('./fonts/NotoSans-Bold.ttf')
     .fontSize(smallFontSize)
-    .text(`Year donations received: ${donee.issuedForYear}`);
+    .text(`Year donations received: `, {continued: true})
+    .font('./fonts/NotoSans-Regular.ttf')
+    .text(donee.issuedForYear);
   doc
-    .font('./fonts/NotoSans-Regular.ttf')
+    .font('./fonts/NotoSans-Bold.ttf')
     .fontSize(smallFontSize)
-    .text(`Location Issued: ${donee.locationIssued}`);
+    .text(`Location Issued: `, {continued: true})
+    .font('./fonts/NotoSans-Regular.ttf')
+    .text(donee.locationIssued);
 
   // donated by, address
   doc
-    .font('./fonts/NotoSans-Regular.ttf')
+    .font('./fonts/NotoSans-Bold.ttf')
     .fontSize(largeFontSize)
-    .text(`Donated by: ${donor.name}`, margins.left, 130);
+    .text(`Donated by: `, margins.left, 130, {continued: true})
+    .font('./fonts/NotoSans-Regular.ttf')
+    .text(donor.name);
   doc
     .moveTo(87 + margins.left, doc.y)
     .lineTo(doc.page.width - margins.right, doc.y)
     .stroke();
 
-  if (donor.billingAddress)
+  if (donor.billingAddress) {
+    const billAddressText = donor.billingAddress.replace(donor.name, "").trim().replace(/\r\n/g, ", ").replace(/\n|\r/g, ", ");
     doc
-      .font('./fonts/NotoSans-Regular.ttf')
+      .font('./fonts/NotoSans-Bold.ttf')
       .fontSize(largeFontSize)
-      .text(`Address: ${donor.billingAddress.replace(donor.name, "").trim().replace(/\r\n/g, ", ").replace(/\n|\r/g, ", ")}`, margins.left, doc.y + 5);
-  else 
+      .text(`Address: `, margins.left, doc.y + 5, {continued: true})
+      .font('./fonts/NotoSans-Regular.ttf')
+      .text(billAddressText);
+  } else 
     doc.moveDown();
   
   doc
@@ -124,10 +135,60 @@ const createDonationReceipt = (receiptNumber, donee, donor, dateIssued = new Dat
     .stroke();
 
   doc.moveDown();
+  doc
+    .font('./fonts/NotoSans-Regular.ttf')
+    .fontSize(smallFontSize)
+    .text('For your own records', {align: "center"});
+  doc
+    .font('./fonts/NotoSans-Bold.ttf')
+    .fontSize(smallFontSize)
+    .text('Squamish United Church');
+  doc.moveDown();
+
+  y = doc.y;
+  if (donor.billingAddress) {
+    if (donor.billingAddress.indexOf(donor.name) === -1) {
+    doc
+      .font('./fonts/NotoSans-regular.ttf')
+      .fontSize(smallFontSize)
+      .text(donor.name);
+    }
+    doc
+      .font('./fonts/NotoSans-regular.ttf')
+      .fontSize(smallFontSize)
+      .text(donor.billingAddress);
+  }
+
+  doc
+    .font('./fonts/NotoSans-Bold.ttf')
+    .fontSize(smallFontSize)
+    .text(`Receipt No: `, 380, y, {continued: true})
+    .font('./fonts/NotoSans-Regular.ttf')
+    .text(receiptNumber);
+  doc
+    .font('./fonts/NotoSans-Bold.ttf')
+    .fontSize(smallFontSize)
+    .text(`Receipt issued: `, {continued: true})
+    .font('./fonts/NotoSans-Regular.ttf')
+    .text(`${dateIssued.getDate()}/${dateIssued.getMonth()}/${dateIssued.getFullYear()}`);
+  doc
+    .font('./fonts/NotoSans-Bold.ttf')
+    .fontSize(smallFontSize)
+    .text(`Year donations received: `, {continued: true})
+    .font('./fonts/NotoSans-Regular.ttf')
+    .text(donee.issuedForYear);
+  doc
+    .font('./fonts/NotoSans-Bold.ttf')
+    .fontSize(smallFontSize)
+    .text(`Total: `, {continued: true})
+    .font('./fonts/NotoSans-Regular.ttf')
+    .text(formatter.format(donor.gift.total));
+
+  doc.moveDown().moveDown();  
   {
     const byCategorySectionWidth = 200,
           spaceBetweenColumns = 8,
-          xOffset = 30;
+          xOffset = 180;
     
     y = doc.y;
     doc
