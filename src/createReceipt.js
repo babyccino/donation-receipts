@@ -28,7 +28,7 @@ const createDonationReceipt = (receiptNumber, donee, donor, dateIssued = new Dat
 
   // logo
   const logoSize = 60;
-  doc.image('./image.jpg', margins.left, 55, {
+  doc.image('./config/small-logo.jpg', margins.left, 55, {
     fit: [logoSize, logoSize]
   });
 
@@ -53,7 +53,7 @@ const createDonationReceipt = (receiptNumber, donee, donor, dateIssued = new Dat
     .fontSize(smallFontSize)
     .text(`Receipt issued: `, 380, 60, {continued: true})
     .font('./fonts/NotoSans-Regular.ttf')
-    .text(`${dateIssued.getDate()}/${dateIssued.getMonth()}/${dateIssued.getFullYear()}`);
+    .text(`${dateIssued.getDate()}/${dateIssued.getMonth()+1}/${dateIssued.getFullYear()}`);
   doc
     .font('./fonts/NotoSans-Bold.ttf')
     .fontSize(smallFontSize)
@@ -75,20 +75,21 @@ const createDonationReceipt = (receiptNumber, donee, donor, dateIssued = new Dat
     .font('./fonts/NotoSans-Regular.ttf')
     .text(donor.name);
   doc
-    .moveTo(87 + margins.left, doc.y)
+    .moveTo(88 + margins.left, doc.y)
     .lineTo(doc.page.width - margins.right, doc.y)
     .stroke();
 
+  let billAddressText;
   if (donor.billingAddress) {
-    const billAddressText = donor.billingAddress.replace(donor.name, "").trim().replace(/\r\n/g, ", ").replace(/\n|\r/g, ", ");
-    doc
-      .font('./fonts/NotoSans-Bold.ttf')
-      .fontSize(largeFontSize)
-      .text(`Address: `, margins.left, doc.y + 5, {continued: true})
-      .font('./fonts/NotoSans-Regular.ttf')
-      .text(billAddressText);
-  } else 
-    doc.moveDown();
+    billAddressText = donor.billingAddress.replace(donor.name, "").trim().replace(/\r\n/g, ", ").replace(/\n|\r/g, ", ");
+  } else
+    billAddressText = " ";
+  doc
+    .font('./fonts/NotoSans-Bold.ttf')
+    .fontSize(largeFontSize)
+    .text(`Address: `, margins.left, doc.y + 5, {continued: true})
+    .font('./fonts/NotoSans-Regular.ttf')
+    .text(billAddressText);
   
   doc
     .moveTo(64 + margins.left, doc.y)
@@ -104,15 +105,15 @@ const createDonationReceipt = (receiptNumber, donee, donor, dateIssued = new Dat
   doc
     .font('./fonts/NotoSans-Regular.ttf')
     .fontSize(smallFontSize)
-    .text(`Eligible amount of gift for tax purposes:  `)
+    .text(`Eligible amount of gift for tax purposes:`)
     .fontSize(40)
     .text(formatter.format(donor.gift.total));
   
   signature = {x: 380, y, width: 200, height:50}
-  doc.image('./signature.png', signature.x, signature.y, {
+  doc.image('./config/signature.png', signature.x, signature.y, {
     fit: [signature.width, signature.height]
   });
-  y += signature.height
+  y += signature.height;
   doc
     .moveTo(signature.x, y)
     .lineTo(signature.x + signature.width, y)
@@ -126,6 +127,7 @@ const createDonationReceipt = (receiptNumber, donee, donor, dateIssued = new Dat
   doc
     .font('./fonts/NotoSans-Regular.ttf')
     .fontSize(smallFontSize)
+    .text(' ', margins.left, doc.y, {align: "center"})
     .text('Canada Revenue Agency: www.canada.ca/charities-giving', margins.left, doc.y, {align: "center"});
 
   doc.moveDown();
@@ -139,24 +141,36 @@ const createDonationReceipt = (receiptNumber, donee, donor, dateIssued = new Dat
     .font('./fonts/NotoSans-Regular.ttf')
     .fontSize(smallFontSize)
     .text('For your own records', {align: "center"});
-  doc
-    .font('./fonts/NotoSans-Bold.ttf')
+
+  doc.moveDown();
+  y = doc.y;
+  doc.image('./config/logo.png', margins.left, y, {
+    fit: [200, 100]
+  });
+
+  doc.moveDown();
+  doc.font('./fonts/NotoSans-Bold.ttf')
     .fontSize(smallFontSize)
-    .text('Squamish United Church');
+    .text(donee.name);
   doc.moveDown();
 
   y = doc.y;
   if (donor.billingAddress) {
     if (donor.billingAddress.indexOf(donor.name) === -1) {
-    doc
-      .font('./fonts/NotoSans-regular.ttf')
-      .fontSize(smallFontSize)
-      .text(donor.name);
+      doc
+        .font('./fonts/NotoSans-regular.ttf')
+        .fontSize(smallFontSize)
+        .text(donor.name);
     }
     doc
       .font('./fonts/NotoSans-regular.ttf')
       .fontSize(smallFontSize)
       .text(donor.billingAddress);
+  } else {
+    doc
+      .font('./fonts/NotoSans-regular.ttf')
+      .fontSize(smallFontSize)
+      .text(donor.name);
   }
 
   doc
@@ -186,9 +200,9 @@ const createDonationReceipt = (receiptNumber, donee, donor, dateIssued = new Dat
 
   doc.moveDown().moveDown();  
   {
-    const byCategorySectionWidth = 200,
+    const byCategorySectionWidth = 350,
           spaceBetweenColumns = 8,
-          xOffset = 180;
+          xOffset = 100;
     
     y = doc.y;
     doc
@@ -198,7 +212,7 @@ const createDonationReceipt = (receiptNumber, donee, donor, dateIssued = new Dat
         width: (byCategorySectionWidth - spaceBetweenColumns)/2,
         align: "right"
       })
-      .text("Amount", xOffset + margins.left + (byCategorySectionWidth + spaceBetweenColumns)/2, y  );
+      .text("Amount", xOffset + margins.left + (byCategorySectionWidth + spaceBetweenColumns)/2, y);
 
     doc
       .moveTo(xOffset + margins.left, doc.y + 1)
@@ -221,7 +235,7 @@ const createDonationReceipt = (receiptNumber, donee, donor, dateIssued = new Dat
           width: (byCategorySectionWidth - spaceBetweenColumns)/2,
           align: "right"
         })
-        .text(formatter.format(donation), xOffset + margins.left + (byCategorySectionWidth + spaceBetweenColumns)/2, y  );
+        .text(formatter.format(donation), xOffset + margins.left + (byCategorySectionWidth + spaceBetweenColumns)/2, y);
     }
   }
 

@@ -11,3 +11,9 @@ node_modules
 *.csv
 
 config/*
+
+data/*
+
+Receipts/*
+
+.vscode

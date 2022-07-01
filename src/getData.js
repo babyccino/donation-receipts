@@ -1,47 +1,49 @@
 var fs = require('fs'); 
-var { parse } = require('csv-parse');
+var { parse } = require('csv');
 
-//       donor = {
-//         name,
-//         address,
-//         gift: {
-//           total,
-//           byCategory: [
-//             {category: total}, ...
-//           ]
-//         }
-//       };
+let getSalesByCustomer = categories => new Promise((res, rej) => {
+  let sales = [];
 
-let getSalesByCustomer = () => new Promise((res, rej) => {
-  var parser = parse({columns: true}, function (err, records) {
+  let customerList = {};
+
+  const parser = (err, records) => {
     if (err) rej(err);
-    
-    let sales = [];
+
     for (const record of records) {
       let sale = {
         name: record.Customer,
         gift: {
-          total: Number.parseFloat(record.TOTAL.replace(/,/g, '')),
+          total: 0,
           byCategory: {}
         }
       };
       
+      let hasCategory = false;
       for (const property in record) {
         if (property == "Customer" || property == "TOTAL" || record[property] == '') continue;
+        if (!categories.includes(property)) continue;
+
+        hasCategory = true;
         
-        sale.gift.byCategory[property] =
-          record[property] == '' ?
+        const amount = record[property] == '' ?
           0 :
           Number.parseFloat(record[property].replace(/,/g, ''));
+
+        sale.gift.byCategory[property] = amount;
+        sale.gift.total += amount;
       }
 
-      sales.push(sale);
+      if (hasCategory) {
+        sales.push(sale);
+        customerList[record.Customer] = true;
+      }
     }
 
     res(sales);
-  });
+  };
   
-  fs.createReadStream(__dirname+'/SalesByCustomer.csv').pipe(parser);
+  fs.createReadStream(__dirname+'/../data/SalesByCustomer.csv')
+    .pipe(parse({ columns: true }, parser));
 });
 
 let getCustomers = () => new Promise((res, rej) => {
@@ -49,19 +51,23 @@ let getCustomers = () => new Promise((res, rej) => {
     if (err) rej(err);
     
     let customerDict = {};
-    for (let customer of records) customerDict[customer.Customer] = customer;
+    for (let customer of records) {
+      if (!customer.Customer || customer.Customer === '') continue;
+      customerDict[customer.Customer] = customer;
+    }
 
     res(customerDict);
   });
   
-  fs.createReadStream(__dirname+'/Customers.csv').pipe(parser);
+  fs.createReadStream(__dirname+'/../data/Customers.csv').pipe(parser);
 });
 
-const getData = async () => {
-  const [salesByCustomers, customers] = await Promise.all([getSalesByCustomer(), getCustomers()]);
+const getData = async categories => {
+  const [salesByCustomers, customers] = await Promise.all([getSalesByCustomer(categories), getCustomers()]);
   for (let entry of salesByCustomers) {
     const customer = customers[entry.name];
 
+    if (!customer) continue;
     if (customer["Billing Address"] || customer["Shipping Address"]) {
       entry.billingAddress = customer["Billing Address"] || customer["Shipping Address"];
       entry.shippingAddress = customer["Shipping Address"] || customer["Billing Address"];
