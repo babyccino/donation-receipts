@@ -1,5 +1,6 @@
 const PDFDocument = require('pdfkit'),
-      getStream = require('get-stream');
+      getStream = require('get-stream'),
+      fs = require('fs');
 
 const createDonationReceipt = (receiptNumber, donee, donor, dateIssued = new Date()) => {
   const margins = {
@@ -12,6 +13,9 @@ const createDonationReceipt = (receiptNumber, donee, donor, dateIssued = new Dat
           size: 'LETTER',
           margins
         });
+
+  const largeLogoExists = fs.existsSync('./config/large-logo.png');
+  const smallLogoExists = fs.existsSync('./config/small-logo.png');
 
   const largeFontSize = 15;
   doc
@@ -28,9 +32,11 @@ const createDonationReceipt = (receiptNumber, donee, donor, dateIssued = new Dat
 
   // logo
   const logoSize = 60;
-  doc.image('./config/small-logo.jpg', margins.left, 55, {
-    fit: [logoSize, logoSize]
-  });
+  if (smallLogoExists) {
+    doc.image('./config/small-logo.png', margins.left, 55, {
+      fit: [logoSize, logoSize]
+    });
+  }
 
   // donee name, address and charity number, left side next to logo
   const smallFontSize = 10;
@@ -144,9 +150,15 @@ const createDonationReceipt = (receiptNumber, donee, donor, dateIssued = new Dat
 
   doc.moveDown();
   y = doc.y;
-  doc.image('./config/logo.png', margins.left, y, {
-    fit: [200, 100]
-  });
+  if (largeLogoExists) {
+    doc.image('./config/large-logo.png', margins.left, y, {
+      fit: [200, 100]
+    });
+  } else if (smallLogoExists) {
+    doc.image('./config/small-logo.png', margins.left, 55, {
+      fit: [logoSize, logoSize]
+    });
+  }
 
   doc.moveDown();
   doc.font('./fonts/NotoSans-Bold.ttf')

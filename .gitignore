@@ -2,18 +2,6 @@ node_modules
 
 *.pdf
 
-## images
-*.jpg
-*.jpeg
-*.png
-*.gif
-
-*.csv
-
-config/*
-
-data/*
-
 Receipts/*
 
 .vscode

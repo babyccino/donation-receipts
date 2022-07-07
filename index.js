@@ -43,6 +43,15 @@ const authenticate = scopes => (new Promise((resolve, reject) => {
   destroyer(server);
 }));
 
+const question = text => new Promise(res => {
+  const readLineInterface = readLine.createInterface({
+    input: process.stdin,
+    output: process.stdout,
+  });
+
+  readLineInterface.question(text, res);
+});
+
 // main
 const main = async () => {
   const optionDefinitions = [
@@ -87,13 +96,14 @@ const main = async () => {
 
   let names;
   if (fs.existsSync('./config/not-sent.json')) {
-    fs.readFileSync('./config/not-sent.json', (err, data) => {
+    fs.readFileSync('./config/not-sent.json', (err, notSentData) => {
       if (err) return;
       try {
-        names = new Set(JSON.parse(data).combined);
+        const json = JSON.parse(notSentData);
+        names = new Set(json.combined);
         console.log(`Donation receipts will only be sent to ${names.length} donors from \
           the last time you run this program who did not have emails and/or billing addresses`)
-      }
+      } catch (e) {}
     });
   }
   
@@ -104,34 +114,30 @@ const main = async () => {
     if (donor.name.indexOf(',') != -1) {
       donor.name = donor.name.split(', ').reverse().join(' ');
     }
-
-    if (names && names.has(donor.name)) {
-      data.splice(i, 1);
-      --i;
-    }
   }
   
+  let alreadySent;
   if (directSend) {
-    const answer = new Promise(res => {
-      const readLineInterface = readLine.createInterface({
-        input: process.stdin,
-        output: process.stdout,
-      });
-
-      readLineInterface.question('Donation receipts will be sent directly to donors. \
-      If you accept the consequences type "YES" and then enter if you wish to proceed:\n', res);
-    });
+    const answer = await question('Donation receipts will be sent directly to donors. \
+      If you accept the consequences type "YES" and then enter if you wish to proceed:\n');
+    
     
     if ((await answer).trim() !== "YES") process.exit(1);
+
+    try {
+      alreadySent = new Set((await readToJSON('./config/already-sent.json')).alreadySent);
+    } catch(e) { }
   }
   
   let noEmails = [];
   let noBillingAddresses = [];
   let combined = [];
   
-  for (let i = 0; i < Math.min(limit, data.length); ++i) {
+  const len = testingPDF ? 1 : Math.min(limit, data.length);
+  for (let i = 0; i < len; ++i) {
     const donor = data[i];
     if (donor.gift.total <= 0) continue;
+    if (names && !names.has(donor.name)) continue;
     
     if ((!donor.email || !donor.billingAddress) && !testingPDF && !writeFile) {
       combined.push(donor.name);
@@ -144,13 +150,12 @@ const main = async () => {
       }
     }
 
-    const doc = createDonationReceipt(i, donee, donor);
+    const doc = createDonationReceipt(i + 1, donee, donor);
 
     const filename = donor.name + ".pdf";
 
     if (testingPDF) {
-      fs.writeFile('./output.pdf', await doc);
-      return;
+      return fs.writeFileSync('./output.pdf', await doc);
     }
 
     if (writeFile) {
@@ -181,9 +186,19 @@ ${donee.name}`;
         }
         
         if (directSend) {
-          const emailOptions = await readToJSON('.//config/email.json');
+          if (alreadySent && alreadySent.has(donor.email)) {
+            const questionText = `A receipt has already been sent to ${donor.name}, would you like to send one to this person again?\nType YES to send: `;
+            const answer = await question(questionText);
+            
+            if (answer !== "YES") continue;
+          }
+
+          const emailOptions = await readToJSON('./config/email.json');
           Mail.sendMail(subject, body, "gus.ryan163@gmail.com", { stream: await doc, filename }, emailOptions)
-            .then(console.log.bind(console))
+            .then(info => {
+              console.log(info);
+              alreadySent.add(donor.email);
+            })
             .catch(console.error.bind(console));
         }
       } catch(e) {
@@ -191,23 +206,23 @@ ${donee.name}`;
       }
     }
   }
+  
+  if (combined.length) {
+    const writeData = JSON.stringify({ noBillingAddresses, noEmails, combined });
+    fs.writeFile('./config/not-sent.json', writeData, err => {
+      if (err) throw err;
 
-  const writeData = JSON.stringify({ billingAddress, noEmails, combined });
-  fs.writeFile('./config/not-sent.json', writeData, err => {
-    if (err) throw err;
-
-    const text =
-`${combine.length} users were not processed as they were either missing emails or billing addresses.
-To see who these users are see config/not-sent.json.
+      const text =
+`${combined.length} users were not processed as they were either missing emails or billing addresses.
+To see these users, see config/not-sent.json.
 Once these users' data has been fixed run the program again to send only to these users`;
 
-    console.log(text);
-  });
+      console.log(text);
+    });
+  }
 };
 
-try {
-  main();
-} catch(e) {
+main().catch(e => {
   console.error(e);
   process.exit(1);
-}
+});
